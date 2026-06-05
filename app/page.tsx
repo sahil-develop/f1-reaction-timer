@@ -238,12 +238,18 @@ export default function Home() {
           `}
           aria-live="polite"
         >
-          <div className="text-5xl sm:text-6xl font-black tabular-nums text-[#E8002D] tracking-tight">
-            {elapsedMs.toFixed(0)}
-            <span className="text-2xl sm:text-3xl ml-2 text-red-800">ms</span>
+          <div className="flex items-end justify-center gap-1 tabular-nums text-[#E8002D] tracking-tight">
+            <span className="text-5xl sm:text-6xl font-black">
+              {Math.floor(elapsedMs / 1000)}
+            </span>
+            <span className="text-2xl sm:text-3xl text-red-800 mb-1">s</span>
+            <span className="text-5xl sm:text-6xl font-black ml-1">
+              {Math.floor(elapsedMs % 1000).toString().padStart(3, '0')}
+            </span>
+            <span className="text-2xl sm:text-3xl text-red-800 mb-1">ms</span>
           </div>
           <p className="text-xs text-zinc-500 font-mono tracking-widest mt-1">
-            AIM: {targetMs} ms
+            AIM: {Math.floor(targetMs / 1000)}s {(targetMs % 1000).toString().padStart(3, '0')}ms
           </p>
         </div>
 

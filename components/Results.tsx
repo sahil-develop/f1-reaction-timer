@@ -6,8 +6,17 @@ interface ResultsProps {
   visible: boolean;
 }
 
-function formatMs(ms: number): string {
-  return `${ms.toFixed(1)} ms`;
+function formatTime(ms: number): string {
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(ms % 1000);
+  return `${s}s ${m.toString().padStart(3, '0')}ms`;
+}
+
+function formatDiff(ms: number): string {
+  const abs = Math.abs(ms);
+  const s = Math.floor(abs / 1000);
+  const m = Math.floor(abs % 1000);
+  return s > 0 ? `${s}s ${m.toString().padStart(3, '0')}ms` : `${m}ms`;
 }
 
 export function Results({ targetTime, actualTime, visible }: ResultsProps) {
@@ -37,24 +46,24 @@ export function Results({ targetTime, actualTime, visible }: ResultsProps) {
           {/* Target */}
           <div className="flex flex-col items-center gap-1 bg-[#0d0d0d] rounded-xl p-3 border border-[#1e1e1e]">
             <span className="text-[10px] font-mono tracking-widest text-zinc-600 uppercase">Target</span>
-            <span className="text-lg sm:text-xl font-bold font-mono text-zinc-300">
-              {formatMs(targetTime)}
+            <span className="text-base sm:text-lg font-bold font-mono text-zinc-300">
+              {formatTime(targetTime)}
             </span>
           </div>
 
           {/* Actual */}
           <div className="flex flex-col items-center gap-1 bg-[#0d0d0d] rounded-xl p-3 border border-[#1e1e1e]">
             <span className="text-[10px] font-mono tracking-widest text-zinc-600 uppercase">Actual</span>
-            <span className="text-lg sm:text-xl font-bold font-mono text-white">
-              {formatMs(actualTime)}
+            <span className="text-base sm:text-lg font-bold font-mono text-white">
+              {formatTime(actualTime)}
             </span>
           </div>
 
           {/* Difference */}
           <div className="flex flex-col items-center gap-1 bg-[#0d0d0d] rounded-xl p-3 border border-[#1e1e1e]">
             <span className="text-[10px] font-mono tracking-widest text-zinc-600 uppercase">Diff</span>
-            <span className={`text-lg sm:text-xl font-bold font-mono ${diffColor}`}>
-              {isExact ? '±0.0 ms' : `${isEarly ? '-' : '+'}${formatMs(absDiff)}`}
+            <span className={`text-base sm:text-lg font-bold font-mono ${diffColor}`}>
+              {isExact ? '±0ms' : `${isEarly ? '-' : '+'}${formatDiff(absDiff)}`}
             </span>
           </div>
         </div>

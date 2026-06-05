@@ -61,6 +61,80 @@ class SoundManager {
     }
   }
 
+  playGreenGo() {
+    try {
+      const ctx = this.getContext();
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(440, now);
+      osc.frequency.exponentialRampToValueAtTime(880, now + 0.15);
+      gain.gain.setValueAtTime(0.3, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+      osc.start(now);
+      osc.stop(now + 0.25);
+    } catch { /* Audio not available */ }
+  }
+
+  playRedStop() {
+    try {
+      const ctx = this.getContext();
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(440, now);
+      osc.frequency.exponentialRampToValueAtTime(220, now + 0.15);
+      gain.gain.setValueAtTime(0.25, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+      osc.start(now);
+      osc.stop(now + 0.2);
+    } catch { /* Audio not available */ }
+  }
+
+  playCaught() {
+    try {
+      const ctx = this.getContext();
+      const now = ctx.currentTime;
+      [0, 0.18, 0.36].forEach(t => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(200, now + t);
+        gain.gain.setValueAtTime(0.4, now + t);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + t + 0.16);
+        osc.start(now + t);
+        osc.stop(now + t + 0.17);
+      });
+    } catch { /* Audio not available */ }
+  }
+
+  playAlarmBeep() {
+    try {
+      const ctx = this.getContext();
+      const now = ctx.currentTime;
+      ([[ 0, 880], [0.12, 1100]] as [number, number][]).forEach(([t, freq]) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'square';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.25, now + t);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + t + 0.1);
+        osc.start(now + t);
+        osc.stop(now + t + 0.11);
+      });
+    } catch { /* Audio not available */ }
+  }
+
   playFinish() {
     try {
       const ctx = this.getContext();
