@@ -3,6 +3,48 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { soundManager } from '@/lib/sounds';
 
+function HowToPlay() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="bg-[#111] border border-[#2a2a2a] rounded-2xl overflow-hidden">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between px-4 py-3 text-left"
+        aria-expanded={open}
+      >
+        <span className="text-[10px] font-mono tracking-[0.3em] text-zinc-500 uppercase">
+          How to Use
+        </span>
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={`text-zinc-600 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+          aria-hidden="true"
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+      {open && (
+        <div className="px-4 pb-4 animate-fade-in">
+          <ol className="space-y-2 text-xs text-zinc-400 font-mono list-decimal list-inside">
+            <li>Use <span className="text-white">+</span> and <span className="text-white">−</span> buttons to set <span className="text-white">minutes</span> and <span className="text-white">seconds</span>.</li>
+            <li>Press <span className="text-[#E8002D]">START</span> to begin the countdown.</li>
+            <li>Press <span className="text-[#E8002D]">PAUSE</span> to pause, then <span className="text-[#E8002D]">RESUME</span> to continue.</li>
+            <li>When time reaches <span className="text-white">zero</span>, the alarm sounds automatically.</li>
+            <li>Press <span className="text-red-400">STOP ALARM</span> to silence it and reset.</li>
+          </ol>
+        </div>
+      )}
+    </div>
+  );
+}
+
 type TimerState = 'idle' | 'running' | 'paused' | 'alarming';
 
 const RADIUS = 88;
@@ -147,6 +189,9 @@ export default function AlarmTimerPage() {
             Countdown with alarm
           </p>
         </div>
+
+        {/* How to Use */}
+        <HowToPlay />
 
         {/* Time Input */}
         {isIdle && (

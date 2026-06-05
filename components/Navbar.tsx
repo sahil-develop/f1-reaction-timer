@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const links = [
-  { href: '/', label: 'F1 TIMER' },
+  { href: '/', label: 'HOME' },
+  { href: '/f1-timer', label: 'F1 TIMER' },
   { href: '/red-green-light', label: 'RED / GREEN' },
   { href: '/timer', label: 'ALARM TIMER' },
 ];

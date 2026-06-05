@@ -1,347 +1,167 @@
-'use client';
+import type { Metadata } from "next";
+import Link from "next/link";
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import type { GameState } from '@/types';
-import { StartingLights } from '@/components/StartingLights';
-import { Results } from '@/components/Results';
-import { Leaderboard } from '@/components/Leaderboard';
-import { useLeaderboard } from '@/hooks/useLeaderboard';
-import { soundManager } from '@/lib/sounds';
+export const metadata: Metadata = {
+  title: "F1 Reaction Timer — Race Start Simulator",
+  description:
+    "Three reaction-time games inspired by Formula 1. Simulate an F1 race start, test your reflexes with red/green lights, or run a countdown alarm. How fast are you?",
+  openGraph: {
+    title: "F1 Reaction Timer — Race Start Simulator",
+    description:
+      "Three reaction-time games inspired by Formula 1. Simulate an F1 race start, test your reflexes, and beat your best time.",
+  },
+};
 
-const LIGHT_INTERVAL_MS = 700;
-const MIN_HOLD_MS = 2000;
-const MAX_HOLD_MS = 5000;
+const games = [
+  {
+    href: "/f1-timer",
+    label: "F1 RACE START",
+    sublabel: "Starting Lights Simulator",
+    description:
+      "Watch 5 red lights illuminate one by one, then react the instant they go out. Set a target time and chase perfection.",
+    accent: "#E8002D",
+    icon: (
+      <div className="flex gap-1" aria-hidden="true">
+        {[0, 1, 2, 3, 4].map((i) => (
+          <div
+            key={i}
+            className="w-3 h-3 rounded-full bg-[#E8002D]"
+            style={{ opacity: 0.4 + i * 0.15 }}
+          />
+        ))}
+      </div>
+    ),
+    badge: "CLASSIC",
+  },
+  {
+    href: "/red-green-light",
+    label: "RED / GREEN LIGHT",
+    sublabel: "10-Round Reaction Test",
+    description:
+      "Press on green, wait on red. 10 rapid-fire rounds test your raw reaction speed and self-control under pressure.",
+    accent: "#22c55e",
+    icon: (
+      <div className="flex gap-2" aria-hidden="true">
+        <div className="w-4 h-4 rounded-full bg-red-500 opacity-70" />
+        <div className="w-4 h-4 rounded-full bg-green-500" />
+      </div>
+    ),
+    badge: "REFLEX",
+  },
+  {
+    href: "/timer",
+    label: "ALARM TIMER",
+    sublabel: "Countdown with Alert",
+    description:
+      "Simple countdown timer with a circular progress ring and alarm. Set any duration up to 99 minutes.",
+    accent: "#E8002D",
+    icon: (
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="text-[#E8002D]"
+        aria-hidden="true"
+      >
+        <circle cx="12" cy="12" r="10" />
+        <polyline points="12 6 12 12 16 14" />
+      </svg>
+    ),
+    badge: "UTILITY",
+  },
+];
 
-function clamp(val: number, min: number, max: number) {
-  return Math.min(Math.max(val, min), max);
-}
-
-export default function Home() {
-  const [targetInput, setTargetInput] = useState('250');
-  const [inputError, setInputError] = useState('');
-  const [gameState, setGameState] = useState<GameState>('idle');
-  const [litCount, setLitCount] = useState(0);
-  const [lightsOut, setLightsOut] = useState(false);
-  const [elapsedMs, setElapsedMs] = useState(0);
-  const [actualTime, setActualTime] = useState(0);
-
-  const startTimeRef = useRef<number>(0);
-  const rafRef = useRef<number>(0);
-  const scheduledTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
-
-  const { attempts, addAttempt, clearAttempts, stats } = useLeaderboard();
-
-  const clearAllTimers = useCallback(() => {
-    scheduledTimers.current.forEach(clearTimeout);
-    scheduledTimers.current = [];
-    cancelAnimationFrame(rafRef.current);
-  }, []);
-
-  const scheduleTimer = useCallback((fn: () => void, delay: number) => {
-    const id = setTimeout(fn, delay);
-    scheduledTimers.current.push(id);
-    return id;
-  }, []);
-
-  const targetMs = clamp(parseInt(targetInput, 10) || 0, 50, 9999);
-
-  const validateInput = (value: string): string => {
-    const n = parseInt(value, 10);
-    if (!value || isNaN(n)) return 'Enter a number between 50 and 9999';
-    if (n < 50) return 'Minimum 50 ms';
-    if (n > 9999) return 'Maximum 9999 ms';
-    return '';
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setTargetInput(val);
-    setInputError(validateInput(val));
-  };
-
-  // Stop the timer and record the reaction time
-  const stopTimer = useCallback(() => {
-    const endTime = performance.now();
-    const measured = endTime - startTimeRef.current;
-    cancelAnimationFrame(rafRef.current);
-    setActualTime(measured);
-    setElapsedMs(measured);
-    setGameState('finished');
-    soundManager.playFinish();
-  }, []);
-
-  const startRace = useCallback(() => {
-    const err = validateInput(targetInput);
-    if (err) {
-      setInputError(err);
-      return;
-    }
-    clearAllTimers();
-    setLitCount(0);
-    setLightsOut(false);
-    setElapsedMs(0);
-    setActualTime(0);
-    setGameState('lights-on');
-
-    for (let i = 0; i < 5; i++) {
-      scheduleTimer(() => {
-        setLitCount(i + 1);
-        soundManager.playLightOn(i);
-      }, (i + 1) * LIGHT_INTERVAL_MS);
-    }
-
-    const allOnTime = 5 * LIGHT_INTERVAL_MS;
-    const holdDuration = MIN_HOLD_MS + Math.random() * (MAX_HOLD_MS - MIN_HOLD_MS);
-
-    scheduleTimer(() => {
-      setGameState('lights-hold');
-    }, allOnTime);
-
-    scheduleTimer(() => {
-      setLightsOut(true);
-      setGameState('racing');
-      soundManager.playLightsOut();
-      startTimeRef.current = performance.now();
-
-      const tick = () => {
-        setElapsedMs(performance.now() - startTimeRef.current);
-        rafRef.current = requestAnimationFrame(tick);
-      };
-      rafRef.current = requestAnimationFrame(tick);
-    }, allOnTime + holdDuration);
-  }, [targetInput, clearAllTimers, scheduleTimer]);
-
-  const reset = useCallback(() => {
-    clearAllTimers();
-    setGameState('idle');
-    setLitCount(0);
-    setLightsOut(false);
-    setElapsedMs(0);
-    setActualTime(0);
-  }, [clearAllTimers]);
-
-  const falseStart = useCallback(() => {
-    clearAllTimers();
-    setGameState('false-start');
-    setLitCount(0);
-    setLightsOut(false);
-  }, [clearAllTimers]);
-
-  // Save result when finished
-  useEffect(() => {
-    if (gameState === 'finished' && actualTime > 0) {
-      addAttempt({
-        targetTime: targetMs,
-        actualTime,
-        difference: actualTime - targetMs,
-      });
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameState, actualTime]);
-
-  // Spacebar shortcut
-  useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.code !== 'Space' || e.repeat) return;
-      if ((e.target as HTMLElement).tagName === 'INPUT') return;
-      e.preventDefault();
-
-      if (gameState === 'idle' || gameState === 'finished' || gameState === 'false-start') {
-        startRace();
-      } else if (gameState === 'racing') {
-        stopTimer();
-      } else if (gameState === 'lights-on' || gameState === 'lights-hold') {
-        // Pressed too early — false start
-        falseStart();
-      }
-    };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [gameState, startRace, stopTimer, falseStart]);
-
-  useEffect(() => () => clearAllTimers(), [clearAllTimers]);
-
-  const isSequencing = gameState === 'lights-on' || gameState === 'lights-hold';
-  const isRacing = gameState === 'racing';
-  const isFinished = gameState === 'finished';
-  const isFalseStart = gameState === 'false-start';
-  const isIdle = gameState === 'idle';
-
+export default function LandingPage() {
   return (
-    <main className="min-h-screen bg-[#0a0a0a] text-white flex flex-col items-center py-8 px-4">
-      <div className="w-full max-w-lg space-y-6">
+    <main className="min-h-screen bg-[#0a0a0a] text-white flex flex-col items-center py-10 px-4">
+      <div className="w-full max-w-lg space-y-10">
 
-        {/* Header */}
-        <div className="text-center space-y-1">
-          <div className="flex items-center justify-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-[#E8002D]" aria-hidden="true" />
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
-              F1 REACTION<span className="text-[#E8002D]"> TIMER</span>
-            </h1>
-            <div className="w-6 h-6 rounded-full bg-[#E8002D]" aria-hidden="true" />
+        {/* Hero */}
+        <section className="text-center space-y-4" aria-label="Hero">
+          <div className="flex items-center justify-center gap-3">
+            <div className="flex gap-1" aria-hidden="true">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  className="w-4 h-4 rounded-full bg-[#E8002D]"
+                  style={{ opacity: 0.3 + i * 0.14 }}
+                />
+              ))}
+            </div>
           </div>
-          <p className="text-xs text-zinc-600 font-mono tracking-widest uppercase">
+          <h1 className="text-3xl sm:text-4xl font-black tracking-tight leading-tight">
+            F1 REACTION<span className="text-[#E8002D]"> TIMER</span>
+          </h1>
+          <p className="text-sm text-zinc-500 font-mono tracking-widest uppercase">
             Race Start Simulator
           </p>
-        </div>
-
-        {/* Target Time Input */}
-        <div className="bg-[#111] border border-[#2a2a2a] rounded-2xl p-4 sm:p-5">
-          <label
-            htmlFor="target-input"
-            className="block text-xs font-mono tracking-[0.3em] text-zinc-500 uppercase mb-1"
-          >
-            Target Reaction Time (ms)
-          </label>
-          <p className="text-[10px] text-zinc-600 font-mono mb-2">
-            Your goal — how fast you&apos;re aiming to react
+          <p className="text-zinc-400 text-sm leading-relaxed max-w-sm mx-auto">
+            Three reaction-time games inspired by Formula&nbsp;1.
+            Test your reflexes, chase your best time, and see how fast you really are.
           </p>
-          <div className="flex gap-3">
-            <input
-              id="target-input"
-              type="number"
-              min={50}
-              max={9999}
-              value={targetInput}
-              onChange={handleInputChange}
-              disabled={isSequencing || isRacing}
-              className={`
-                flex-1 bg-[#0d0d0d] border rounded-xl px-4 py-3 font-mono text-lg font-bold
-                text-white text-center tracking-wider
-                focus:outline-none focus:ring-1 transition-colors
-                disabled:opacity-40 disabled:cursor-not-allowed
-                [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
-                ${inputError
-                  ? 'border-red-500 focus:ring-red-500'
-                  : 'border-[#2a2a2a] focus:border-[#E8002D] focus:ring-[#E8002D]/30'
-                }
-              `}
-              placeholder="250"
-            />
-            <div className="flex items-center text-zinc-600 font-mono text-sm">ms</div>
-          </div>
-          {inputError && (
-            <p className="mt-1.5 text-xs text-red-400 font-mono">{inputError}</p>
-          )}
-        </div>
+        </section>
 
-        {/* Starting Lights */}
-        <div className="flex justify-center">
-          <StartingLights litCount={litCount} lightsOut={lightsOut} />
-        </div>
-
-        {/* Live Timer (shown while racing) */}
-        <div
-          className={`
-            text-center font-mono transition-all duration-150
-            ${isRacing ? 'opacity-100' : 'opacity-0 pointer-events-none'}
-          `}
-          aria-live="polite"
-        >
-          <div className="flex items-end justify-center gap-1 tabular-nums text-[#E8002D] tracking-tight">
-            <span className="text-5xl sm:text-6xl font-black">
-              {Math.floor(elapsedMs / 1000)}
-            </span>
-            <span className="text-2xl sm:text-3xl text-red-800 mb-1">s</span>
-            <span className="text-5xl sm:text-6xl font-black ml-1">
-              {Math.floor(elapsedMs % 1000).toString().padStart(3, '0')}
-            </span>
-            <span className="text-2xl sm:text-3xl text-red-800 mb-1">ms</span>
-          </div>
-          <p className="text-xs text-zinc-500 font-mono tracking-widest mt-1">
-            AIM: {Math.floor(targetMs / 1000)}s {(targetMs % 1000).toString().padStart(3, '0')}ms
-          </p>
-        </div>
-
-        {/* False Start Banner */}
-        {isFalseStart && (
-          <div className="bg-yellow-500/10 border border-yellow-500/40 rounded-2xl p-4 text-center animate-fade-in">
-            <p className="text-yellow-400 font-black tracking-widest text-lg">FALSE START!</p>
-            <p className="text-yellow-600 text-xs font-mono mt-1">You moved before the lights went out</p>
-          </div>
-        )}
-
-        {/* Controls */}
-        <div className="flex gap-3">
-          {isIdle || isFinished || isFalseStart ? (
-            <button
-              onClick={startRace}
-              disabled={!!inputError}
-              className="
-                flex-1 bg-[#E8002D] hover:bg-[#FF0040] active:bg-[#c0001f]
-                disabled:opacity-40 disabled:cursor-not-allowed
-                text-white font-black text-sm tracking-[0.2em] uppercase
-                rounded-xl py-4 transition-colors
-                focus:outline-none focus:ring-2 focus:ring-[#E8002D]/50
-              "
+        {/* Game Cards */}
+        <section aria-label="Games" className="space-y-3">
+          <h2 className="text-[10px] font-mono tracking-[0.3em] text-zinc-600 uppercase text-center">
+            Choose a Game
+          </h2>
+          {games.map(({ href, label, sublabel, description, badge, icon }) => (
+            <Link
+              key={href}
+              href={href}
+              className="group block bg-[#111] hover:bg-[#161616] border border-[#2a2a2a] hover:border-[#3a3a3a] rounded-2xl p-5 transition-all"
             >
-              {isFinished || isFalseStart ? 'TRY AGAIN' : 'START'}
-              <span className="opacity-60 font-normal text-xs ml-2">[Space]</span>
-            </button>
-          ) : isSequencing ? (
-            <button
-              onClick={reset}
-              className="
-                flex-1 bg-[#1a1a1a] hover:bg-[#222] active:bg-[#2a2a2a]
-                border border-[#333] hover:border-[#555]
-                text-zinc-400 font-bold text-sm tracking-[0.2em] uppercase
-                rounded-xl py-4 transition-colors
-                focus:outline-none focus:ring-2 focus:ring-white/10
-              "
-            >
-              ABORT
-            </button>
-          ) : (
-            /* REACT button — only shown when lights are out */
-            <button
-              onClick={stopTimer}
-              className="
-                flex-1 bg-green-500 hover:bg-green-400 active:bg-green-600
-                text-black font-black text-xl tracking-[0.15em] uppercase
-                rounded-xl py-5 transition-colors
-                focus:outline-none focus:ring-2 focus:ring-green-400/50
-                animate-pulse
-              "
-            >
-              REACT!
-              <span className="font-normal text-sm ml-2 opacity-70">[Space]</span>
-            </button>
-          )}
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-2 flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {icon}
+                    <span className="text-xs font-mono text-zinc-600 border border-[#2a2a2a] rounded px-1.5 py-0.5 tracking-widest">
+                      {badge}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="font-black text-base tracking-tight text-white group-hover:text-zinc-100">
+                      {label}
+                    </p>
+                    <p className="text-[10px] font-mono text-zinc-600 tracking-widest uppercase mt-0.5">
+                      {sublabel}
+                    </p>
+                  </div>
+                  <p className="text-xs text-zinc-500 leading-relaxed">{description}</p>
+                </div>
+                <div className="shrink-0 self-center">
+                  <div className="w-8 h-8 rounded-lg bg-[#1a1a1a] border border-[#2a2a2a] group-hover:border-[#E8002D]/40 flex items-center justify-center transition-colors">
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="text-zinc-600 group-hover:text-[#E8002D] transition-colors"
+                      aria-hidden="true"
+                    >
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </Link>
+          ))}
+        </section>
 
-          {isFinished && (
-            <button
-              onClick={reset}
-              className="
-                bg-[#1a1a1a] hover:bg-[#222]
-                border border-[#333]
-                text-zinc-400 font-bold text-sm tracking-wider uppercase
-                rounded-xl px-5 py-4 transition-colors
-                focus:outline-none focus:ring-2 focus:ring-white/10
-              "
-            >
-              RESET
-            </button>
-          )}
-        </div>
-
-        {/* Instruction hint */}
+        {/* Quick start hint */}
         <p className="text-center text-[10px] text-zinc-700 font-mono tracking-widest">
-          {isSequencing
-            ? 'WAIT FOR LIGHTS OUT — THEN REACT!'
-            : isRacing
-            ? 'PRESS SPACE OR TAP REACT AS FAST AS YOU CAN!'
-            : 'PRESS SPACE TO START'}
+          SELECT A GAME ABOVE TO BEGIN
         </p>
-
-        {/* Results */}
-        <Results
-          targetTime={targetMs}
-          actualTime={actualTime}
-          visible={isFinished}
-        />
-
-        {/* Leaderboard */}
-        <Leaderboard attempts={attempts} stats={stats} onClear={clearAttempts} />
 
       </div>
     </main>

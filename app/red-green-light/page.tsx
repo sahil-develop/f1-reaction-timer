@@ -3,6 +3,54 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { soundManager } from '@/lib/sounds';
 
+function HowToPlay() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="bg-[#111] border border-[#2a2a2a] rounded-2xl overflow-hidden">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between px-4 py-3 text-left"
+        aria-expanded={open}
+      >
+        <span className="text-[10px] font-mono tracking-[0.3em] text-zinc-500 uppercase">
+          How to Play
+        </span>
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={`text-zinc-600 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+          aria-hidden="true"
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+      {open && (
+        <div className="px-4 pb-4 space-y-2 animate-fade-in">
+          <ol className="space-y-2 text-xs text-zinc-400 font-mono list-decimal list-inside">
+            <li>Press <span className="text-white">START</span> or <kbd className="bg-[#222] border border-[#333] rounded px-1 text-[10px]">Space</kbd> to begin the first round.</li>
+            <li>A circle appears — <span className="text-red-400">RED means wait</span>, <span className="text-green-400">GREEN means go</span>.</li>
+            <li>Press the screen or <kbd className="bg-[#222] border border-[#333] rounded px-1 text-[10px]">Space</kbd> as fast as possible when it turns <span className="text-green-400">GREEN</span>.</li>
+            <li>Pressing during <span className="text-red-400">RED</span> counts as a <span className="text-yellow-400">false start</span> — short penalty applies.</li>
+            <li>Complete all <span className="text-white">10 rounds</span> to see your stats.</li>
+          </ol>
+          <div className="mt-3 pt-3 border-t border-[#1e1e1e] grid grid-cols-2 gap-2 text-[10px] font-mono text-zinc-600">
+            <div><span className="text-purple-400">Insane:</span> &lt;150 ms</div>
+            <div><span className="text-blue-400">Elite:</span> &lt;200 ms</div>
+            <div><span className="text-green-400">Great:</span> &lt;260 ms</div>
+            <div><span className="text-yellow-400">Good:</span> &lt;350 ms</div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 type Phase = 'idle' | 'red' | 'green' | 'false-start' | 'finished';
 
 interface Round {
@@ -139,6 +187,9 @@ export default function RedGreenLightPage() {
             Press when GREEN — not when RED
           </p>
         </div>
+
+        {/* How to Play */}
+        <HowToPlay />
 
         {/* Round dots */}
         {!isIdle && (
